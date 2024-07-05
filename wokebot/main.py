@@ -19,7 +19,7 @@ client = discord.Client(intents=intents)
 async def on_ready():
     channel = client.get_channel(CHANNEL_ID)
     if channel:
-        await channel.send("All systems online")
+        await channel.send("*All systems online*")
     else:
         print("Failed to find channel :<")
     print(f'{client.user} has connected to the server!')

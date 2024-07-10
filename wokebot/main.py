@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands
-import random
+from dateutil import parser as dateparser
 
 # Load environment variables
 load_dotenv()
@@ -10,10 +10,7 @@ load_dotenv()
 # Retrieve Discord token from environment
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-# Define channel ID where bot will send messages
-CHANNEL_ID = 1258684017943777330  # Replace with your channel ID
-
-# Create intents
+# Define intents
 intents = discord.Intents.default()
 intents.messages = True  # Enable message intent
 intents.typing = False
@@ -23,74 +20,90 @@ intents.message_content = True
 # Initialize bot with intents
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+# Example scheduled events database (for demonstration)
+scheduled_events = {}
+
 # Event: Bot is ready
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
-    
-    # Send "All systems online" message to specified channel
-    channel = bot.get_channel(CHANNEL_ID)
-    if channel:
-        await channel.send("*All systems online*")
-    else:
-        print("Failed to find channel :<")
-    
-    print(f'{bot.user} has connected to the server!')
+    print('Bot is ready to handle commands!')
 
-# Event: Bot is disconnected
-@bot.event
-async def on_disconnect():
-    print("Bot disconnected from Discord.")
-    try:
-        channel = bot.get_channel(CHANNEL_ID)
-        if channel:
-            await channel.send("*Powering off...*")
-        else:
-            print("Failed to find channel :<")
-    except Exception as e:
-        print(f"Error in on_disconnect: {e}")
-
-
-# Event: Message received
-@bot.event
-async def on_message(message):
-    if message.author == bot.user:
+# Command: Add
+@bot.command()
+async def add(ctx, time=None, players: int=None, *, game=None):
+    """Add a game to the schedule."""
+    if time is None or players is None or game is None:
+        await ctx.send("No arguments stated, command failed. Please provide all arguments: `!add <time> <players> <game>`")
         return
     
-    if message.content.startswith('!'):
-        command = message.content[1:].lower()
-        
-        if command == 'hello':
-            response = "Hiiiiii!"
-            await send_message(message, response)  # Send in the channel
-        elif command == 'roll':
-            response = str(random.randint(1, 6))
-            await send_message(message, response)  # Send in the channel
-        elif command == 'help':
-            response = "`This is a help message that you can modify`"
-            await send_message(message, response)  # Send in the channel
-        else:
-            response = handle_response(message)
-            await send_message(message, response)  # Send in the channel
-
-# Function to send messages (private or channel)
-async def send_message(message, response):
     try:
-        await message.channel.send(response)
-    except discord.Forbidden:
-        await message.channel.send("I don't have permission to send messages.")
+        scheduled_time = dateparser.parse(time).time()
+    except ValueError:
+        await ctx.send("Invalid time format. Please use a valid time format, e.g., 'HH:MM'.")
+        return
 
-# Function to handle responses based on message content
-def handle_response(message) -> str:
-    p_message = message.content.lower()
+    # Create a message for scheduling the game
+    schedule_message = await ctx.send(f"React to this message to join the game: {game} at {time} with {players} players needed!")
 
-    if p_message == 'hello':
-        return "Hi!"
-    
-    if p_message == '!help':
-        return "`This is a help message that you can modify`"
-    
-    return "Sorry, I didn't understand that."
+    # Store the scheduled game details
+    scheduled_events[game.lower()] = {
+        'time': scheduled_time,
+        'organizer': ctx.author.name,
+        'players_needed': players,
+        'participants': [],
+        'message_id': schedule_message.id  # Store the message ID for future reference
+    }
+
+    # Add reactions to the scheduling message for user interaction
+    await schedule_message.add_reaction('✅')  # You can add more reactions as needed
+
+    await ctx.send(f"Added {game} to the schedule at {time} with {players} players needed!")
+
+# Event: Reaction Added
+@bot.event
+async def on_raw_reaction_add(payload):
+    """Handle reaction added event."""
+    if payload.user_id == bot.user.id:
+        return
+
+    channel = await bot.fetch_channel(payload.channel_id)
+    message = await channel.fetch_message(payload.message_id)
+
+    if message.author == bot.user:
+        game_name = None
+        for game, details in scheduled_events.items():
+            if details['message_id'] == message.id:
+                game_name = game
+                break
+        
+        if game_name:
+            scheduled_events[game_name]['participants'].append(payload.member.name)
+            print(f"{payload.member.name} joined {game_name}!")
+
+# Command : list
+
+@bot.command()
+async def list(ctx):
+    """List all scheduled games."""
+    if scheduled_events:
+        games_list = "\n".join([f"{game}: {details['time']} by {details['organizer']} - {details['players_needed']} players, Participants: {', '.join(details['participants'])}" for game, details in scheduled_events.items()])
+        await ctx.send(f"**Scheduled Games:**\n{games_list}")
+    else:
+        await ctx.send("No games scheduled.")
+
+# command : remove
+
+@bot.command()
+async def remove(ctx, *, game=None):
+    """Remove a game from the schedule."""
+    if game is None or game == "":
+        await ctx.send("Please specify which game to remove.")
+    elif game in scheduled_events:
+        del scheduled_events[game.lower()]
+        await ctx.send(f"Removed {game} from the schedule.")
+    else:
+        await ctx.send(f"{game} is not scheduled.")
 
 # Run the bot with the specified token
 bot.run(TOKEN)

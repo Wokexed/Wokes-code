@@ -91,12 +91,10 @@ async def on_raw_reaction_add(payload):
             participants = ', '.join(scheduled_events[game_name]['participants'])
             await message.edit(content=f"React to this message to join the game: {game_name} at {details['time']} with {details['players_needed']} players needed!\nParticipants: {participants}")
 
-            scheduled_events[game_name]['participants'].append(payload.member.name)
             print(f"{payload.member.name} joined {game_name}!")
 
 # reaction removed
 
-@bot.event
 @bot.event
 async def on_raw_reaction_remove(payload):
     """Handle reaction removed event."""

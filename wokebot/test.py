@@ -165,23 +165,23 @@ class MusicBot(commands.Cog):
         self.client = client
         self.queue = []
 
-        @commands.command()
-        async def play(self, ctx, *, search):
-            voice_channel = ctx.author.voice.channel if ctx.author.voice else None
-            if not voice_channel:
-                return await ctx.send("You're not in a voice channel!")
-            if not ctx.voice_client:
-                await voice_channel.connect()
+    @commands.command()
+    async def play(self, ctx, *, search):
+        voice_channel = ctx.author.voice.channel if ctx.author.voice else None
+        if not voice_channel:
+            return await ctx.send("You're not in a voice channel!")
+        if not ctx.voice_client:
+            await voice_channel.connect()
 
-            async with ctx.typing():
-                with yt_dlp.YoutubeDl(YDL_OPTIONS) as ydl:
-                    info = ydl.extract_info(f"ytsearch:{search}", download=False)
-                    if 'entries' in info:
-                        info = info['entries'][0]
-                    url = info['url']
-                    title = info['title']
-                    self.queue.append((url, title))
-                    await ctx.send(f'Added to queue: **{title}**')
+        async with ctx.typing():
+            with yt_dlp.YoutubeDl(YDL_OPTIONS) as ydl:
+                info = ydl.extract_info(f"ytsearch:{search}", download=False)
+                if 'entries' in info:
+                    info = info['entries'][0]
+                url = info['url']
+                title = info['title']
+                self.queue.append((url, title))
+                await ctx.send(f'Added to queue: **{title}**')
             if not ctx.voice_client.is_playing():
                 await self.play_next(ctx)
     async def play_next(self, ctx):

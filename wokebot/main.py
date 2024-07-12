@@ -30,6 +30,9 @@ async def on_ready():
     print(f'Logged in as {bot.user}')
     print('Bot is ready to handle commands!')
 
+    # start reminder loop
+    reminder_loop.start()
+
 # Command: Add
 @bot.command()
 async def add(ctx, date=None, time=None, players: int=None, *, game=None):
@@ -79,33 +82,43 @@ async def on_raw_reaction_add(payload):
                 break
         
         if game_name:
-            scheduled_events[game_name]['participants'].append(payload.member.name)
-            print(f"{payload.member.name} joined {game_name}!")
+            participant_id = payload.user_id
+            if participant_id not in scheduled_events[game_name]['participants']:
+                scheduled_events[game_name]['participants'].append(participant_id)
+                print(f"{payload.member.name} joined {game_name}!")
 
 # Reminder 
 
-@tasks.loop(minutes=10)  # Adjust the interval as needed
+@tasks.loop(minutes=1)  # Adjust the interval as needed
 async def reminder_loop():
     """Check for events starting within the next hour and send reminders."""
     now = datetime.now()
     for game, details in scheduled_events.items():
-        if details['datetime'] > now and details['datetime'] <= now + timedelta(hours=1):
+        if details['datetime'] > now and details['datetime'] <= now + timedelta(hours=1) and not details['reminder_sent']:
             message_id = details['message_id']
             channel_id = 1258684017943777330  # Replace with the appropriate channel ID where the message was sent
             channel = bot.get_channel(channel_id)
             if channel:
-                message = await channel.fetch_message(message_id)
+                try:
+                    message = await channel.fetch_message(message_id)
+                except discord.errors.NotFound:
+                    # Handle case where message is not found (deleted)
+                    print(f"Message for game {game} with ID {message_id} not found.")
+                    continue
+                
                 if message:
                     participants = details['participants']
-                    for participant in participants:
-                        user = await bot.fetch_user(participant)  # Fetch the user object
+                    for participant_id in participants:
+                        user = await bot.fetch_user(participant_id)  # Fetch the user object by ID
                         if user:
                             try:
                                 await user.send(f"Reminder: Your game {game} is starting in 1 hour at {details['datetime'].strftime('%Y-%m-%d %H:%M')}")
+                                details['reminder_sent'] = True  # Set reminder_sent flag to True after sending reminder
                             except discord.Forbidden:
-                                print(f"Failed to send reminder to {participant}: User has blocked DMs or bot cannot DM them.")
+                                print(f"Failed to send reminder to {user.name}: User has blocked DMs or bot cannot DM them.")
 
 # Error handling for reminder loop
+
 @reminder_loop.error
 async def remind_loop_error(error):
     print(f"Error in the reminder loop: {error}")
@@ -118,12 +131,19 @@ async def list(ctx):
     if scheduled_events:
         games_list = []
         for game, details in scheduled_events.items():
-            participants = ', '.join(details['participants']) if details['participants'] else 'None'
-            games_list.append(f"{game}: {details['datetime'].strftime('%Y-%m-%d %H:%M')} by {details['organizer']} - {details['players_needed']} players, Participants: {participants}")
+            print(f"Processing game: {game}, details: {details}")                     # Debug message for game and details
+            try:
+                participants = ', '.join([f"{(await bot.fetch_user(pid)).name}" for pid in details['participants']]) if details['participants'] else 'None'
+                organizer = await bot.fetch_user(details['organizer'])
+                games_list.append(f"{game}: {details['datetime'].strftime('%Y-%m-%d %H:%M')} by {organizer.name} - {details['players_needed']} players, Participants: {participants}")
+            except Exception as e:
+                print(f"Error fetching user info for game: {game}, error: {e}")       # Debug message for errors
         
         await ctx.send(f"**Scheduled Games:**\n" + "\n".join(games_list))
     else:
         await ctx.send("No games scheduled.")
+
+
 
 # command : remove
 

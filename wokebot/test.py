@@ -126,10 +126,11 @@ async def add(ctx, date=None, time=None, players: int=None, *, game=None):
     # Store the scheduled game details
     scheduled_events[game.lower()] = {
         'datetime': scheduled_datetime,
-        'organizer': ctx.author.name,
+        'organizer': str(ctx.author.id),
         'players_needed': players,
         'participants': [],
-        'message_id': schedule_message.id  # Store the message ID for future reference
+        'message_id': schedule_message.id,  # Store the message ID for future reference
+        'reminder_sent' : False     
     }
 
     # Add reactions to the scheduling message for user interaction
@@ -167,6 +168,9 @@ async def reminder_loop():
     """Check for events starting within the next hour and send reminders."""
     now = datetime.now()
     for game, details in scheduled_events.items():
+        if 'reminder_sent' not in details:
+            details['reminder_sent'] = False  # Initialize reminder_sent if it doesn't exist
+        
         if details['datetime'] > now and details['datetime'] <= now + timedelta(hours=1) and not details['reminder_sent']:
             message_id = details['message_id']
             channel_id = 1258684017943777330  # Replace with the appropriate channel ID where the message was sent
@@ -185,14 +189,10 @@ async def reminder_loop():
                         user = await bot.fetch_user(participant_id)  # Fetch the user object by ID
                         if user:
                             try:
-                                await user.send(f"Reminder: Your game {game} is starting in 1 hour at {details['datetime'].strftime('%Y-%m-%d %H:%M')}")
+                                await user.send(f"Reminder: Your game {game} is starting soon at {details['datetime'].strftime('%Y-%m-%d %H:%M')}")
                                 details['reminder_sent'] = True  # Set reminder_sent flag to True after sending reminder
                             except discord.Forbidden:
                                 print(f"Failed to send reminder to {user.name}: User has blocked DMs or bot cannot DM them.")
-                        else:
-                            print(f"User with ID {participant_id} not found.")
-                else:
-                    print(f"Message with ID {message_id} not found in channel {channel_id}.")
 
 # Error handling for reminder loop
 @reminder_loop.error
@@ -203,19 +203,56 @@ async def remind_loop_error(error):
 @bot.command()
 async def list(ctx):
     """List all scheduled games."""
+    print("List command received")
     if scheduled_events:
         games_list = []
         for game, details in scheduled_events.items():
             print(f"Processing game: {game}, details: {details}")  # Debug message for game and details
             try:
-                participants = ', '.join([f"{(await bot.fetch_user(pid)).name}" for pid in details['participants']]) if details['participants'] else 'None'
-                organizer = await bot.fetch_user(details['organizer'])
-                games_list.append(f"{game}: {details['datetime'].strftime('%Y-%m-%d %H:%M')} by {organizer.name} - {details['players_needed']} players, Participants: {participants}")
+                # Fetching participant names
+                participants = []
+                for pid in details['participants']:
+                    try:
+                        user = await bot.fetch_user(pid)
+                        participants.append(user.name)
+                    except discord.NotFound:
+                        participants.append("Unknown User")  # Handle case where user is not found
+                        print(f"Participant with ID {pid} not found.")
+
+                participants_str = ', '.join(participants) if participants else 'None'
+
+                # Fetching organizer name
+                try:
+                    organizer_id = str(details['organizer'])  # Ensure organizer ID is a string
+                    if organizer_id.isdigit():  # Check if ID is a valid numeric string
+                        organizer_id_int = int(organizer_id)
+                        organizer = await bot.fetch_user(organizer_id_int)
+                        organizer_name = organizer.name
+                    else:
+                        organizer_name = "Unknown"  # Handle case where ID is not valid
+                        print(f"Invalid organizer ID format: {organizer_id}")
+                except discord.NotFound:
+                    organizer_name = "Unknown"
+                    print(f"Organizer with ID {details['organizer']} not found.")
+                except ValueError:
+                    organizer_name = "Unknown"
+                    print(f"Invalid organizer ID: {details['organizer']}")
+
+                # Adding game info to the list
+                games_list.append(
+                    f"{game}: {details['datetime'].strftime('%Y-%m-%d %H:%M')} by {organizer_name} - "
+                    f"{details['players_needed']} players, Participants: {participants_str}"
+                )
             except Exception as e:
                 print(f"Error fetching user info for game: {game}, error: {e}")  # Debug message for errors
         
-        await ctx.send(f"**Scheduled Games:**\n" + "\n".join(games_list))
+        # Sending the list of games to the channel
+        if games_list:
+            await ctx.send(f"**Scheduled Games:**\n" + "\n".join(games_list))
+        else:
+            await ctx.send("No games scheduled.")
     else:
+        print("No games scheduled")
         await ctx.send("No games scheduled.")
 
 # Command: Remove
@@ -244,14 +281,13 @@ async def delete_all(ctx):
             await ctx.send("I don't have permission to delete messages.")
     else:
         print("User does not have permission to delete messages.")
-        await ctx.send("You don't have permission to delete messages in this channel.")
+        await ctx.send("I don't have permission to delete messages in this channel.")
 
-# Setup hook to add MusicBot cog
-async def setup_hook():
-    await bot.add_cog(MusicBot(bot))
-
-# Set the setup_hook method
-bot.setup_hook = setup_hook
+# Main function to start the bot
+async def main():
+    async with bot:
+        await bot.add_cog(MusicBot(bot))
+        await bot.start(TOKEN)
 
 # Run the bot
-bot.run(TOKEN)
+asyncio.run(main())

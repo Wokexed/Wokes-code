@@ -60,6 +60,7 @@ class MusicBot(commands.Cog):
             await ctx.send(f'Error: {e}')
             await ctx.voice_client.disconnect()
         
+# !help
 
     @commands.command()
     async def skip(self, ctx):
@@ -68,6 +69,16 @@ class MusicBot(commands.Cog):
             print("Skipping current song")
             ctx.voice_client.stop()
             await ctx.send("Skipped")
+
+# !disconnect
+
+    @commands.command()
+    async def disconnect(self, ctx):
+        if ctx.voice_client:
+            await ctx.voice_client.disconnect()
+            await ctx.send("Disconnected from the voice channel!")
+        else:
+            await ctx.send("I am not in a voice channel!")
 
 client = commands.Bot(command_prefix="!", intents=intents)
 

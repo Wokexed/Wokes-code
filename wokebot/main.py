@@ -53,7 +53,6 @@ async def add(ctx, date=None, time=None, players: int=None, *, game=None):
     # Store the scheduled game details
     scheduled_events[game.lower()] = {
         'datetime': scheduled_datetime,
-        'organizer': ctx.author.name,
         'players_needed': players,
         'participants': [],
         'message_id': schedule_message.id  # Store the message ID for future reference
@@ -65,6 +64,7 @@ async def add(ctx, date=None, time=None, players: int=None, *, game=None):
     await ctx.send(f"Added {game} to the schedule at {date} {time} with {players} players needed!")
 
 # Event: Reaction Added
+
 @bot.event
 async def on_raw_reaction_add(payload):
     """Handle reaction added event."""
@@ -86,6 +86,30 @@ async def on_raw_reaction_add(payload):
             if participant_id not in scheduled_events[game_name]['participants']:
                 scheduled_events[game_name]['participants'].append(participant_id)
                 print(f"{payload.member.name} joined {game_name}!")
+
+# Event : Reaction Removed
+
+@bot.event
+async def on_raw_reaction_remove(payload):
+    """Handle reaction removed event."""
+    if payload.user_id == bot.user.id:
+        return
+    
+    channel = await bot.fetch_channel(payload.channel_id)
+    message = await channel.fetch_message(payload.message_id)
+
+    if message.author == bot.user:
+        game_name = None
+        for game, details in scheduled_events.items():
+            if details['message_id'] == message.id:
+                game_name = game
+                break
+
+    if game_name:
+            participant_id = payload.user_id
+            if participant_id in scheduled_events[game_name]['participants']:
+                scheduled_events[game_name]['participants'].remove(participant_id)
+                print(f"User {payload.user_id} left {game_name}.")
 
 # Reminder 
 
@@ -134,16 +158,13 @@ async def list(ctx):
             print(f"Processing game: {game}, details: {details}")                     # Debug message for game and details
             try:
                 participants = ', '.join([f"{(await bot.fetch_user(pid)).name}" for pid in details['participants']]) if details['participants'] else 'None'
-                organizer = await bot.fetch_user(details['organizer'])
-                games_list.append(f"{game}: {details['datetime'].strftime('%Y-%m-%d %H:%M')} by {organizer.name} - {details['players_needed']} players, Participants: {participants}")
+                games_list.append(f"{game}: {details['datetime'].strftime('%Y-%m-%d %H:%M')} - {details['players_needed']} players, Participants: {participants}")
             except Exception as e:
                 print(f"Error fetching user info for game: {game}, error: {e}")       # Debug message for errors
         
         await ctx.send(f"**Scheduled Games:**\n" + "\n".join(games_list))
     else:
         await ctx.send("No games scheduled.")
-
-
 
 # command : remove
 

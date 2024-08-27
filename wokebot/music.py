@@ -18,6 +18,10 @@ class MusicBot(commands.Cog):
         self.client = client
         self.queue = []
 
+    @commands.Cog.listener()
+    async def on_ready(self):
+        print('Bot is ready to DJ!')
+
     @commands.command()
     async def play(self, ctx, *, search):
         print("Received play command")

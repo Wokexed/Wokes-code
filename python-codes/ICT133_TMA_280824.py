@@ -12,7 +12,7 @@
 #             AI = int(input("Assessable Income: "))
 #             if AI <= 34000:
 #                 print("You will receive $600 AP Cash")
-#             elif AI > 34000 and AI <= 100000:\
+#             elif AI > 34000 and AI <= 100000:
 #                 print("You will receive $350 AP Cash")
 #             else:
 #                 print("You will receive $200 AP Cash")
@@ -89,7 +89,7 @@
 
 # mainb() 
 
-# Question 2a
+# # Question 2a
 # def isAnagram(word1, word2):
 #     word1str = str(word1).lower() # ensures the word is a string and in lower case
 #     word2str = str(word2).lower()
@@ -180,18 +180,25 @@
             
 # main()
 
-# Question 3a)
-def factorial1(n):
+
+# # Question 3a)
+# def factorial1(n):
+#     product = 1 # Initialize product
+#     for x in range(1, n + 1):
+#         product *= x
+
+#     print(product)
+
+# factorial1(8)
+
+ # Question 3b)
+def factorial2(n: int, lookupTable: list) -> int:
     product = 1 # Initialize product
     for x in range(1, n + 1):
         product *= x
 
-    print(product)
 
-factorial1(8)
-
- # Question 3b)
-# def factorial2(n: int, lookupTable: list) -> int:
+factorial2(5,lookupTable)
 
 
 
@@ -207,67 +214,119 @@ def getPlayers():
     playerlist.append(player2)
 
     print(playerlist)
+    return playerlist
 
 def getNewBoard(size):
-    print(type(size)) 
     board = [['?' for x in range(size)] for x in range(size)]
     
-    treasure_count = (size**2 - 1) // 2   # calculate no. of treasures needed to be planted (integer divison to be used)
+    treasure_count = (size ** 2 - 1) // 2   # calculate no. of treasures needed to be planted (integer divison to be used)
     treasures = 0                         # initialize no. of treasures
 
     while treasures < treasure_count:
         row = random.randint(0, size - 1)
         col = random.randint(0, size - 1)
         if board[row][col] == "?":
-            board[row][col] = "*"
+            board[row][col] = "x"
             treasures += 1
         
     return board
 
-def printBoard(board):
+def printBoard(board, revealed):
     size = len(board)
     print("  ", end="")
-    for i in range(size):
-        print(i, end=" ")
+    for r in range(size):
+        print(r, end=" ")
     print()
     
-    for i in range(size):
-        print(str(i) + " ", end="")
-        for j in range(size):
-            print(board[i][j], end=" ")
+    for r in range(size):
+        print(str(r) + " ", end="")
+        for c in range(size):
+            # hides the treasures
+            if revealed[r][c]:
+                print(board[r][c], end=" ")
+            else:
+                print("?", end=" ")
+
         print()
 
-
+def validatePick(player, board, revealed):
+    while True:
+        try:
+            move = input(f"{player}, pick your square:")
+            row, col = map(int, move.strip("[]").split("]["))
+            if revealed[row][col] == "?":
+                print("Square opened!! Please re-enter")
+            elif board[row][col]== "x":
+                return row, col,  True
+            else:
+                return row, col, False
+        except (ValueError, IndexError):
+            print("Invalid input. Please enter coordinates in the form [row][col].")
 
 
 def main():
 
-    getPlayers()
+    players = getPlayers()
+
+    score = [0, 0]
+
+    current_player = random.randint(0, 1)
 
     while True:
         getSize = int(input("Size of game board: "))
         if getSize >= 5 and getSize % 2 != 0:
-            size = int(getSize)
             print(f"Size of board is now set to {getSize}")
             break
 
         else:
             print("Size of board must be odd and at least 5! ")
 
+    size = getSize
     board = getNewBoard(size)
-    getNewBoard(board)
+    revealed = [[False for _ in range(size)] for _ in range(size)]
 
-main()
+    treasures_remaining = (size ** 2 - 1) // 2
+
+    while treasures_remaining > 0:
+        printBoard(board, revealed)
+        row, col, found_treasure = validatePick(current_player, board, revealed)
+        
+        if found_treasure:
+            print("Is a hit!!")
+            board[row][col] = "*"  # Mark found treasure with "X"
+            score[current_player] += 1
+            treasures_remaining -= 1
+        else:
+            print("No treasure there...")
+            board[row][col] = "-"  # Mark missed attempt with "-"
+        
+        revealed[row][col] = True  # Mark the coor as revealed
+
+        print(f"Current score: {players[0]} ({score[0]}) {players[1]} ({score[1]})")
+    
+        current_player = 1 - current_player
+
+    printBoard(board, revealed)
+
+    # player 0 wins
+    while True:
+        if score[0] > (size ** 2 - 1) // 4:
+            print(f"Final score: {players[0]} ({score[0]}) {players[1]} ({score[1]})")
+            print(f"{players[0]} is the winner!!")
+            break
+        # player 1 wins
+        elif score[1] > (size ** 2 - 1) // 4:
+            print(f"Final score: {players[0]} ({score[0]}) {players[1]} ({score[1]})")
+            print(f"{players[1]} is the winner!!")
+            break
+        elif score[0] == score[1] and treasures_remaining < 1:
+            print(f"It's a tie!! {players[0]} ({score[0]}) {players[1]} ({score[1]}")
+            print("Rematch...")
+            continue
+
+ 
+main()  
 
 
 
 
-def spawnBoard(size):
-  print(" ", end=" ")
-  for i in range(size):
-    print(i, end=" ")
-  print("")
-  for i in range(size):
-    print(str(i) + " ?" * size)
-
-spawnBoard(5)

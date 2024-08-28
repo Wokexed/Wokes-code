@@ -187,21 +187,35 @@
 #     for x in range(1, n + 1):
 #         product *= x
 
-#     print(product)
-
-# factorial1(8)
-
- # Question 3b)
-def factorial2(n: int, lookupTable: list) -> int:
-    product = 1 # Initialize product
-    for x in range(1, n + 1):
-        product *= x
+#     return product
 
 
-factorial2(5,lookupTable)
+#  # Question 3b)
+# def factorial2(n: int, lookupTable: list) -> int:
+    
+#     if len(lookupTable) >= n:
+#         if lookupTable[n - 1] == factorial1(n):
+#             k = lookupTable[n - 1]
+            
+#             return k
+    
+#     else:
+#         k = lookupTable[-1]          # give the variable 'k' a value
+#         for i in range(len(lookupTable) + 1, n + 1):
+#             k *= i
+#             lookupTable.append(k)
 
+#         return k, lookupTable
+        
+# def main():
+#     lookupTable = [1, 2, 6]
 
+#     n = int(input("Enter n to compute factorial: "))
+#     print("Factorial1 of {}: {}".format(n, factorial1(n)))
+#     print("Factorial2 of {}: {}".format(n, factorial2(n, lookupTable)))
+#     print(lookupTable)
 
+# main()
 
 # Question 4
 import random
@@ -220,7 +234,7 @@ def getNewBoard(size):
     board = [['?' for x in range(size)] for x in range(size)]
     
     treasure_count = (size ** 2 - 1) // 2   # calculate no. of treasures needed to be planted (integer divison to be used)
-    treasures = 0                         # initialize no. of treasures
+    treasures = 0                           # initialize no. of treasures
 
     while treasures < treasure_count:
         row = random.randint(0, size - 1)

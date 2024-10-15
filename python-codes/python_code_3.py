@@ -867,9 +867,7 @@ class Department:
                 "courses" :""
             }
     def add_course(attri1):
-
-
-
+        print("this is a placeholder")
 
 class Student:
     def __init__(attri2, name, student_number, modules):

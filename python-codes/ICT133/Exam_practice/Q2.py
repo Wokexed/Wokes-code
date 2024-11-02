@@ -1,3 +1,4 @@
+# a
 def isBinary(digits):
 
     for n in digits:
@@ -11,6 +12,7 @@ def isBinary(digits):
 isBinary("12345")
 isBinary("001010010")
 
+# b
 def toDecimal(binary):
     value = 0
     length = len(binary)
@@ -24,6 +26,7 @@ toDecimal("1011")
 toDecimal("1110")
 toDecimal("100")
 
+# c
 def main():
     binarycount = 0
     while True:

@@ -36,8 +36,9 @@ def writeBallotResult(txt, data):
         file.write(f"{'Name':<8}{'Votes':>8}\n")
         for name, vote in zip(names,votes):
             file.write(f"{name :<8}{vote :>4}\n")
-
-
+        winner = max(data, key=data.get)
+        file.write("\n")
+        file.write(f"Winner is {winner}")
 
 def main():
     ballotData = readBallotData(r"C:\Users\Ray Lee\OneDrive\Desktop\Repository\Wokes-code\python-codes\ICT133_Jan2024EQP\ballots.txt")

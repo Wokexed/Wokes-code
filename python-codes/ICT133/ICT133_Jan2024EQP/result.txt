@@ -1,4 +1,6 @@
 Name       Votes
-Liang      3
+Liang      8
 Song       3
 Tham       5
+
+Winner is Liang

@@ -8,7 +8,7 @@ score = [
 w = []
 x = len(score)
 for i in range(x):
-    print("R", int(i + 1), *score[i])
+    print("R" + str(int(i + 1)), *score[i])
     w.append(len(score[i]))
 
 print(f"Average number of rolls per round = {sum(w)/x}")

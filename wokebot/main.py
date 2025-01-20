@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands, tasks
 from dateutil import parser as dateparser
 from datetime import datetime, timedelta
+import webfolder
 
 # Load environment variables
 load_dotenv()
@@ -194,4 +195,5 @@ async def delete_all(ctx):
         await ctx.send("You don't have permission to delete messages in this channel.")
 
 # Run the bot with the specified token
+webfolder.keepalive()
 bot.run(TOKEN)

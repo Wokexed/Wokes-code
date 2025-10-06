@@ -1,3 +1,8 @@
+import asyncio
+import sys
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 import discord
 from discord.ext import commands
 import random
@@ -8,7 +13,7 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-AUDIO_FOLDER = "sounds"  # Folder that stores all your sound files (e.g., .mp3, .wav)
+AUDIO_FOLDER = AUDIO_FOLDER = r"C:\Users\Ray Lee\OneDrive\Desktop\Repository\Wokes-code\wokebot\booboobot\sounds"
 
 @bot.event
 async def on_ready():
@@ -24,6 +29,64 @@ async def join(ctx):
         await ctx.send(f"Joined **{channel}** ✅")
     else:
         await ctx.send("You're not in a voice channel!")
+
+@bot.command()
+async def help(ctx):
+    """Display a list of available commands."""
+    help_text = """
+**🎵 Soundboard Bot Commands**
+
+`!join` - Bot joins your current voice channel  
+`!playrandom` - Plays a random sound from the sounds folder  
+`!leave` - Bot leaves the voice channel  
+`!help` - Shows this help message
+"""
+    await ctx.send(help_text)
+
+@bot.command()
+async def list(ctx):
+    """List all available sound files."""
+    if not os.path.exists(AUDIO_FOLDER):
+        await ctx.send("⚠️ No sounds folder found!")
+        return
+
+    files = [f for f in os.listdir(AUDIO_FOLDER) if f.lower().endswith(('.mp3', '.wav'))]
+    if not files:
+        await ctx.send("⚠️ No sound files found in the folder.")
+        return
+
+    file_list = "\n".join(files)
+    await ctx.send(f"**Available sounds:**\n{file_list}")
+
+
+@bot.command()
+async def play(ctx, *, name: str):
+    """Play a specific sound by name."""
+    vc = ctx.voice_client
+    if not vc:
+        await ctx.send("Use !join first so I can join your voice channel.")
+        return
+
+    path = os.path.join(AUDIO_FOLDER, name)
+    if not os.path.isfile(path):
+        await ctx.send(f"⚠️ File not found: {name}")
+        return
+
+    vc.stop()  # Stop anything currently playing
+
+    # Custom volume for each file
+    volume_levels = {
+        "dimwit.mp3": 1.0,
+        "faku.wav": 1.2,
+        "urnigger.mp3": 2.0,
+        "wadafuq.mp3": 1.0
+    }
+    volume = volume_levels.get(name, 1.0)
+    audio_source = discord.FFmpegPCMAudio(path, options=f"-af volume={volume}")
+    vc.play(audio_source)
+
+    await ctx.send(f"🎶 Now playing: **{name}** at volume {volume}x")
+
 
 @bot.command()
 async def playrandom(ctx):
@@ -48,8 +111,20 @@ async def playrandom(ctx):
     path = os.path.join(AUDIO_FOLDER, chosen)
 
     vc.stop()  # Stop anything currently playing
-    vc.play(discord.FFmpegPCMAudio(path))
-    await ctx.send(f"🎶 Now playing: **{chosen}**")
+
+    volume_levels = {
+        "dimwit.mp3": 1.0,
+        "faku.wav": 1.2,
+        "urnigger.mp3": 2.0,
+        "wadafuq.mp3": 1.0
+    }
+
+    # Default volume is 1.0 if file not listed
+    volume = volume_levels.get(chosen, 1.0)
+    audio_source = discord.FFmpegPCMAudio(path, options=f"-af volume={volume}")
+    vc.play(audio_source)
+
+    await ctx.send(f"🎶 Now playing: **{chosen}** at volume {volume}x")
 
 @bot.command()
 async def leave(ctx):
@@ -61,4 +136,4 @@ async def leave(ctx):
     else:
         await ctx.send("I'm not connected to a voice channel.")
 
-bot.run("YOUR_BOT_TOKEN")
+bot.run("hidden")
